@@ -30,9 +30,9 @@ cli({
 
     const securityId = kwargs.security_id;
 
-    // Navigate to zhipin.com first to establish cookie context
+    // Navigate to zhipin.com first to establish cookie context (referrer + cookies)
     await page.goto('https://www.zhipin.com/web/geek/job');
-    await new Promise(r => setTimeout(r, 1000));
+    await page.wait({ time: 1 });
 
     const targetUrl = `https://www.zhipin.com/wapi/zpgeek/job/detail.json?securityId=${encodeURIComponent(securityId)}`;
 
@@ -44,7 +44,7 @@ cli({
       async () => {
         return new Promise((resolve, reject) => {
           const xhr = new window.XMLHttpRequest();
-          xhr.open('GET', '${targetUrl}', true);
+          xhr.open('GET', ${JSON.stringify(targetUrl)}, true);
           xhr.withCredentials = true;
           xhr.timeout = 15000;
           xhr.setRequestHeader('Accept', 'application/json, text/plain, */*');
@@ -85,13 +85,17 @@ cli({
     const bossInfo = zpData.bossInfo || {};
     const brandComInfo = zpData.brandComInfo || {};
 
+    if (!jobInfo.jobName) {
+      throw new Error('该职位信息不存在或已下架');
+    }
+
     return [{
       name: jobInfo.jobName || '',
       salary: jobInfo.salaryDesc || '',
       experience: jobInfo.experienceName || '',
       degree: jobInfo.degreeName || '',
       city: jobInfo.locationName || '',
-      district: jobInfo.address || '',
+      district: [jobInfo.areaDistrict, jobInfo.businessDistrict].filter(Boolean).join('·'),
       description: jobInfo.postDescription || '',
       skills: (jobInfo.showSkills || []).join(', '),
       welfare: (brandComInfo.labels || []).join(', '),
