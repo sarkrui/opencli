@@ -72,6 +72,12 @@ OpenCLI 通过 Playwright MCP Bridge 扩展与你的浏览器通信。
 export PLAYWRIGHT_MCP_EXTENSION_TOKEN="<你的-token>"
 ```
 
+配置完成后，运行 `opencli doctor` 检测你的 Token 是否在所有位置都正确配置：
+
+```bash
+opencli doctor
+```
+
 ## 快速开始
 
 ### npm 全局安装（推荐）

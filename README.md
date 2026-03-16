@@ -72,6 +72,12 @@ And, so that `opencli` commands can use it directly in the terminal, export it i
 export PLAYWRIGHT_MCP_EXTENSION_TOKEN="<your-token-here>"
 ```
 
+After configuring, run `opencli doctor` to verify your token is correctly set up across all locations:
+
+```bash
+opencli doctor
+```
+
 ## Quick Start
 
 ### Install via npm (recommended)
