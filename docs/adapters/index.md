@@ -54,6 +54,7 @@ Run `opencli list` for the live registry.
 | **[zsxq](./browser/zsxq)** | `groups` `dynamics` `topics` `topic` `search` | 🔐 Browser |
 | **[bluesky](./browser/bluesky)** | `search` `profile` `user` `feeds` `followers` `following` `thread` `trending` `starter-packs` | 🌐 Public |
 | **[douyin](./browser/douyin)** | `profile` `videos` `user-videos` `activities` `collections` `hashtag` `location` `stats` `publish` `draft` `drafts` `delete` `update` | 🔐 Browser |
+| **[xianyu](./browser/xianyu)** | `search` `item` `chat` | 🔐 Browser |
 
 ## Public API Adapters
 

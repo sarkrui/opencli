@@ -115,7 +115,7 @@ git clone git@github.com:jackwener/opencli.git && cd opencli && npm install && n
 ## Prerequisites
 
 - **Node.js**: >= 20.0.0 (or **Bun** >= 1.0)
-- **Chrome** running **and logged into the target site** (e.g. bilibili.com, zhihu.com, xiaohongshu.com).
+- **Chrome** running **and logged into the target site** (e.g. bilibili.com, zhihu.com, xiaohongshu.com, goofish.com).
 
 > **⚠️ Important**: Browser commands reuse your Chrome login session. You must be logged into the target website in Chrome before running commands. If you get empty data or errors, check your login status first.
 
@@ -132,6 +132,7 @@ git clone git@github.com:jackwener/opencli.git && cd opencli && npm install && n
 | **gemini** | `new` `ask` `image` |
 | **notebooklm** | `status` `list` `open` `select` `current` `get` `metadata` `source-list` `source-get` `source-fulltext` `source-guide` `history` `note-list` `notes-list` `notes-get` `summary` |
 | **spotify** | `auth` `status` `play` `pause` `next` `prev` `volume` `search` `queue` `shuffle` `repeat` |
+| **xianyu** | `search` `item` `chat` |
 
 73+ adapters in total — **[→ see all supported sites & commands](./docs/adapters/index.md)**
 

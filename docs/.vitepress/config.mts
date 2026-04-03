@@ -91,6 +91,7 @@ export default defineConfig({
                 { text: 'TikTok', link: '/adapters/browser/tiktok' },
                 { text: 'Web (Generic)', link: '/adapters/browser/web' },
                 { text: 'Weixin', link: '/adapters/browser/weixin' },
+                { text: 'Xianyu', link: '/adapters/browser/xianyu' },
               ],
             },
             {
