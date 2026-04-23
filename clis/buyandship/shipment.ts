@@ -15,7 +15,7 @@ cli({
   args: [
     { name: 'id', positional: true, required: true, help: 'Shipment id from buyandship shipments list' },
   ],
-  columns: ['id', 'courier_trackno', 'warehouse_id', 'shipment_type', 'shipment_status', 'item_names', 'created_at'],
+  columns: ['id', 'courier_trackno', 'warehouse_id', 'shipment_type', 'shipment_status', 'status_label', 'item_names', 'created_at'],
   func: async (page, kwargs) => {
     const shipment = await fetchShipment(page, kwargs.id);
     return [mapShipmentRow(shipment)];

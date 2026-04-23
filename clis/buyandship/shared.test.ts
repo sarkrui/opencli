@@ -67,4 +67,38 @@ describe('buyandship helpers', () => {
     expect(__test__.shouldSubmitDeclaration({ execute: false })).toBe(false);
     expect(__test__.shouldSubmitDeclaration({ 'dry-run': true })).toBe(false);
   });
+
+  it('attaches a human-readable status_label to shipment rows', () => {
+    expect(__test__.mapShipmentRow({ id: 1, shipment_status: 'bns_warehouse' }).status_label)
+      .toBe('Ready to consolidate');
+    expect(__test__.mapShipmentRow({ id: 2, shipment_status: 'bns_out' }).status_label)
+      .toBe('Handed to third-party courier');
+    expect(__test__.mapShipmentRow({ id: 3, shipment_status: 'unknown_code' }).status_label)
+      .toBe('unknown_code');
+    expect(__test__.mapShipmentRow({ id: 4 }).status_label).toBe('');
+  });
+
+  it('attaches a human-readable status_label and shipment_tracknos to order rows', () => {
+    const out = __test__.mapOrderRow({
+      id: 1,
+      order_status: 'bns_out',
+      shipments: [{ trackno: 'AAA' }, { trackno: 'BBB' }, { trackno: '' }],
+    });
+    expect(out.status_label).toBe('Ready for pickup/delivery');
+    expect(out.shipment_count).toBe(3);
+    expect(out.shipment_tracknos).toBe('AAA; BBB');
+
+    expect(__test__.mapOrderRow({ id: 2, order_status: 'bns_complete' }).status_label)
+      .toBe('Picked up / delivered');
+    expect(__test__.mapOrderRow({ id: 3, order_status: 'mystery' }).status_label).toBe('mystery');
+  });
+
+  it('resolveStatusFilter accepts codes and label substrings', () => {
+    expect(__test__.resolveStatusFilter('bns_warehouse', __test__.SHIPMENT_STATUS_LABELS)).toBe('bns_warehouse');
+    expect(__test__.resolveStatusFilter('ready to consolidate', __test__.SHIPMENT_STATUS_LABELS)).toBe('bns_warehouse');
+    expect(__test__.resolveStatusFilter('HANDED TO', __test__.SHIPMENT_STATUS_LABELS)).toBe('bns_out');
+    expect(__test__.resolveStatusFilter('ready for pickup', __test__.ORDER_STATUS_LABELS)).toBe('bns_out');
+    expect(__test__.resolveStatusFilter('nonsense_code', __test__.SHIPMENT_STATUS_LABELS)).toBe('nonsense_code');
+    expect(__test__.resolveStatusFilter('', __test__.SHIPMENT_STATUS_LABELS)).toBe('');
+  });
 });

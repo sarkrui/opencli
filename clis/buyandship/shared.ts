@@ -5,6 +5,34 @@ import { ArgumentError, AuthRequiredError, CommandExecutionError } from '@jackwe
 import type { IPage } from '@jackwener/opencli/types';
 
 export const BUYANDSHIP_DOMAIN = 'www.buyandship.today';
+
+export const SHIPMENT_STATUS_LABELS: Record<string, string> = {
+  publish: 'Pending arrival',
+  bns_in: 'Arrived at overseas warehouse',
+  bns_warehouse: 'Ready to consolidate',
+  bns_out: 'Handed to third-party courier',
+  bns_complete: 'Consolidated / delivered',
+};
+
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  publish: 'Draft',
+  bns_payment: 'Awaiting payment',
+  bns_inspection: 'Inspecting',
+  bns_in: 'Arrived at HK warehouse',
+  bns_out: 'Ready for pickup/delivery',
+  bns_complete: 'Picked up / delivered',
+};
+
+export function resolveStatusFilter(input: string, labels: Record<string, string>): string {
+  const raw = String(input ?? '').trim();
+  if (!raw) return '';
+  if (labels[raw]) return raw;
+  const needle = raw.toLowerCase();
+  for (const [code, label] of Object.entries(labels)) {
+    if (label.toLowerCase().includes(needle)) return code;
+  }
+  return raw;
+}
 export const BUYANDSHIP_EN_BASE = `https://${BUYANDSHIP_DOMAIN}/en/account/v2020`;
 export const BUYANDSHIP_NEW_SHIPMENT_URL = `${BUYANDSHIP_EN_BASE}/shipments/new/`;
 export const BUYANDSHIP_SHIPMENTS_URL = `https://${BUYANDSHIP_DOMAIN}/api/shipments`;
@@ -716,12 +744,14 @@ export async function loadDraftRecordFromFile(
 }
 
 export function mapShipmentRow(shipment: BuyandshipShipment): Record<string, unknown> {
+  const code = shipment.shipment_status ?? '';
   return {
     id: shipment.id,
     courier_trackno: shipment.courier_trackno ?? '',
     warehouse_id: shipment.warehouse_id ?? '',
     shipment_type: shipment.shipment_type ?? '',
-    shipment_status: shipment.shipment_status ?? '',
+    shipment_status: code,
+    status_label: SHIPMENT_STATUS_LABELS[code] ?? code,
     item_count: Array.isArray(shipment.content) ? shipment.content.length : 0,
     item_names: summarizeShipmentContent(shipment.content),
     created_at: formatUnixSeconds(shipment.created),
@@ -731,13 +761,21 @@ export function mapShipmentRow(shipment: BuyandshipShipment): Record<string, unk
 }
 
 export function mapOrderRow(order: BuyandshipOrder): Record<string, unknown> {
+  const code = order.order_status ?? '';
+  const shipments = Array.isArray(order.shipments) ? order.shipments : [];
+  const tracknos = shipments
+    .map((s) => String(s?.trackno ?? ''))
+    .filter(Boolean)
+    .join('; ');
   return {
     id: order.id,
     order_no: order.order_no ?? '',
-    order_status: order.order_status ?? '',
+    order_status: code,
+    status_label: ORDER_STATUS_LABELS[code] ?? code,
     shipment_type: order.shipment_type ?? '',
-    shipment_count: Array.isArray(order.shipments) ? order.shipments.length : 0,
+    shipment_count: shipments.length,
     courier_trackno: order.courier_trackno ?? '',
+    shipment_tracknos: tracknos,
     chargeable_weight: order.chargeable_weight ?? '',
     fee: order.fee ?? '',
     address_type_name: order.address_type_name ?? '',
@@ -780,4 +818,7 @@ export const __test__ = {
   mapOrderRow,
   modeToShipmentType,
   modeToLabel,
+  resolveStatusFilter,
+  SHIPMENT_STATUS_LABELS,
+  ORDER_STATUS_LABELS,
 };
