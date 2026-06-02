@@ -101,4 +101,70 @@ describe('buyandship helpers', () => {
     expect(__test__.resolveStatusFilter('nonsense_code', __test__.SHIPMENT_STATUS_LABELS)).toBe('nonsense_code');
     expect(__test__.resolveStatusFilter('', __test__.SHIPMENT_STATUS_LABELS)).toBe('');
   });
+
+  it('exposes shipment weight in mapped row', () => {
+    expect(__test__.mapShipmentRow({ id: 1, weight: '0.3' }).weight).toBe('0.3');
+    expect(__test__.mapShipmentRow({ id: 2 }).weight).toBe('');
+  });
+
+  it('groups same-warehouse shipments to keep fractional pounds in the efficient zone', () => {
+    const shipments: BuyandshipShipment[] = [
+      { id: 1, courier_trackno: 'A', warehouse_id: 'wh-uk', weight: '0.3' },
+      { id: 2, courier_trackno: 'B', warehouse_id: 'wh-uk', weight: '0.3' },
+      { id: 3, courier_trackno: 'C', warehouse_id: 'wh-uk', weight: '0.3' },
+      { id: 4, courier_trackno: 'D', warehouse_id: 'wh-uk', weight: '0.3' },
+    ];
+
+    const groups = __test__.planConsolidationGroups(shipments, { maxItems: 10, minFractional: 0.8 });
+    expect(groups).toHaveLength(2);
+    const efficient = groups.find((group) => group.efficient);
+    expect(efficient).toBeDefined();
+    expect(efficient!.items).toHaveLength(3);
+    expect(efficient!.total_weight).toBeCloseTo(0.9, 5);
+  });
+
+  it('combines items across warehouses since fees are uniform', () => {
+    const shipments: BuyandshipShipment[] = [
+      { id: 1, warehouse_id: 'wh-uk', courier_trackno: 'U1', weight: '1.5' },
+      { id: 2, warehouse_id: 'wh-uk', courier_trackno: 'U2', weight: '1.0' },
+      { id: 3, warehouse_id: 'wh-uk', courier_trackno: 'U3', weight: '0.7' },
+      { id: 4, warehouse_id: 'wh-uk', courier_trackno: 'U4', weight: '0.5' },
+      { id: 5, warehouse_id: 'wh-it', courier_trackno: 'I1', weight: '0.2' },
+    ];
+
+    const groups = __test__.planConsolidationGroups(shipments, { maxItems: 10, minFractional: 0.8 });
+    expect(groups).toHaveLength(1);
+    expect(groups[0].items).toHaveLength(5);
+    expect(groups[0].warehouses).toEqual(['wh-it', 'wh-uk']);
+    expect(groups[0].total_weight).toBeCloseTo(3.9, 5);
+    expect(groups[0].efficient).toBe(true);
+  });
+
+  it('respects maxItems and maxWeight caps', () => {
+    const shipments: BuyandshipShipment[] = [
+      { id: 1, warehouse_id: 'wh-uk', weight: '1.5' },
+      { id: 2, warehouse_id: 'wh-it', weight: '1.4' },
+      { id: 3, warehouse_id: 'wh-it', weight: '1.0' },
+    ];
+
+    const cappedItems = __test__.planConsolidationGroups(shipments, { maxItems: 1 });
+    expect(cappedItems).toHaveLength(3);
+    expect(cappedItems.every((group) => group.items.length === 1)).toBe(true);
+
+    const cappedWeight = __test__.planConsolidationGroups(shipments, { maxItems: 10, maxWeight: 2.5 });
+    expect(cappedWeight.every((group) => group.total_weight <= 2.5 + 1e-6)).toBe(true);
+    expect(cappedWeight.length).toBeGreaterThan(1);
+  });
+
+  it('skips shipments without a usable weight', () => {
+    const shipments: BuyandshipShipment[] = [
+      { id: 1, warehouse_id: 'wh-uk', weight: '0.3' },
+      { id: 2, warehouse_id: 'wh-uk', weight: '' },
+      { id: 3, warehouse_id: 'wh-uk' },
+    ];
+
+    const groups = __test__.planConsolidationGroups(shipments);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].items.map((item) => item.id)).toEqual([1]);
+  });
 });

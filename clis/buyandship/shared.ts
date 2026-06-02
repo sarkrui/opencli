@@ -754,10 +754,112 @@ export function mapShipmentRow(shipment: BuyandshipShipment): Record<string, unk
     status_label: SHIPMENT_STATUS_LABELS[code] ?? code,
     item_count: Array.isArray(shipment.content) ? shipment.content.length : 0,
     item_names: summarizeShipmentContent(shipment.content),
+    weight: shipment.weight ?? '',
     created_at: formatUnixSeconds(shipment.created),
     updated_at: formatUnixSeconds(shipment.updated),
     remarks: shipment.remarks ?? '',
   };
+}
+
+export interface ConsolidationCandidate {
+  id: number;
+  trackno: string;
+  warehouse_id: string;
+  weight: number;
+}
+
+export interface ConsolidationGroup {
+  items: ConsolidationCandidate[];
+  warehouses: string[];
+  total_weight: number;
+  rounded_lb: number;
+  fractional: number;
+  efficient: boolean;
+}
+
+export interface PlanOptions {
+  maxItems?: number;
+  maxWeight?: number;
+  minFractional?: number;
+}
+
+export function planConsolidationGroups(
+  shipments: BuyandshipShipment[],
+  opts: PlanOptions = {},
+): ConsolidationGroup[] {
+  const maxItems = opts.maxItems ?? 10;
+  const maxWeight = opts.maxWeight ?? Infinity;
+  const minFractional = opts.minFractional ?? 0.8;
+  const epsilon = 1e-6;
+
+  const candidates: ConsolidationCandidate[] = [];
+  for (const shipment of shipments) {
+    const weight = Number(shipment.weight);
+    if (!Number.isFinite(weight) || weight <= 0) continue;
+    candidates.push({
+      id: shipment.id,
+      trackno: shipment.courier_trackno ?? '',
+      warehouse_id: shipment.warehouse_id ?? 'unknown',
+      weight,
+    });
+  }
+
+  const isEfficient = (frac: number): boolean =>
+    frac < epsilon || frac >= minFractional - epsilon;
+
+  const sorted = [...candidates].sort((a, b) => b.weight - a.weight);
+  interface Bucket {
+    items: ConsolidationCandidate[];
+    total: number;
+    frozen: boolean;
+  }
+  const buckets: Bucket[] = [];
+
+  for (const item of sorted) {
+    let bestIdx = -1;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < buckets.length; i++) {
+      const bucket = buckets[i];
+      if (bucket.frozen || bucket.items.length >= maxItems) continue;
+      const newTotal = bucket.total + item.weight;
+      if (newTotal > maxWeight + epsilon) continue;
+      const newFrac = newTotal - Math.floor(newTotal + epsilon);
+      const score = isEfficient(newFrac) ? 1 + newFrac : newFrac;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+
+    if (bestIdx === -1) {
+      if (item.weight > maxWeight + epsilon) {
+        buckets.push({ items: [item], total: item.weight, frozen: true });
+      } else {
+        buckets.push({ items: [item], total: item.weight, frozen: false });
+      }
+    } else {
+      const bucket = buckets[bestIdx];
+      bucket.items.push(item);
+      bucket.total += item.weight;
+      const frac = bucket.total - Math.floor(bucket.total + epsilon);
+      if (isEfficient(frac)) bucket.frozen = true;
+    }
+  }
+
+  return buckets.map((bucket) => {
+    const total = Number(bucket.total.toFixed(3));
+    const fractional = Number((bucket.total - Math.floor(bucket.total + epsilon)).toFixed(3));
+    const warehouses = Array.from(new Set(bucket.items.map((item) => item.warehouse_id))).sort();
+    return {
+      items: bucket.items,
+      warehouses,
+      total_weight: total,
+      rounded_lb: Math.ceil(bucket.total - epsilon) || Math.ceil(bucket.total),
+      fractional,
+      efficient: isEfficient(fractional),
+    };
+  });
 }
 
 export function mapOrderRow(order: BuyandshipOrder): Record<string, unknown> {
@@ -819,6 +921,7 @@ export const __test__ = {
   modeToShipmentType,
   modeToLabel,
   resolveStatusFilter,
+  planConsolidationGroups,
   SHIPMENT_STATUS_LABELS,
   ORDER_STATUS_LABELS,
 };

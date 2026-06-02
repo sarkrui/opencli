@@ -20,7 +20,7 @@ cli({
     { name: 'warehouse', help: 'Optional warehouse_id filter such as warehouse-bnsuk-ashford' },
     { name: 'track', help: 'Optional substring filter for courier_trackno' },
   ],
-  columns: ['id', 'courier_trackno', 'warehouse_id', 'shipment_type', 'shipment_status', 'status_label', 'item_count', 'created_at'],
+  columns: ['id', 'courier_trackno', 'warehouse_id', 'shipment_type', 'shipment_status', 'status_label', 'item_count', 'weight', 'created_at'],
   func: async (page, kwargs) => {
     const shipments = await fetchShipments(page);
     const statusInput = String(kwargs.status ?? '').trim();
